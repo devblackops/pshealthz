@@ -159,7 +159,7 @@ function Start-HTTPListener {
 
                 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 
-                Import-Module -Name OperationValidation -Verbose:$false -ErrorAction Stop
+                Import-Module -Name Microsoft.PowerShell.Operation.Validation -Verbose:$false -ErrorAction Stop
 
                 $resp = [ordered]@{
                     success = $true
@@ -171,14 +171,14 @@ function Start-HTTPListener {
                 }
 
                 try {
-                    $ovfTests = OperationValidation\Get-OperationValidation -Verbose:$false -ErrorAction SilentlyContinue
+                    $ovfTests = Microsoft.PowerShell.Operation.Validation\Get-OperationValidation -Verbose:$false -ErrorAction SilentlyContinue
                     $resp.availableTests = $ovfTests | foreach { $_.Name }
 
                     if ($PSBoundParameters.ContainsKey('Name')) {
                         if ($Name -eq 'all' -or $Name -eq '*') {
-                            $ovfResults = $ovfTests | OperationValidation\Invoke-OperationValidation -Verbose:$false -ErrorAction SilentlyContinue
+                            $ovfResults = $ovfTests | Microsoft.PowerShell.Operation.Validation\Invoke-OperationValidation -Verbose:$false -ErrorAction SilentlyContinue
                         } else {
-                            $ovfResults = $ovfTests | where Name -eq $Name | OperationValidation\Invoke-OperationValidation -Verbose:$false -ErrorAction SilentlyContinue
+                            $ovfResults = $ovfTests | where Name -eq $Name | Microsoft.PowerShell.Operation.Validation\Invoke-OperationValidation -Verbose:$false -ErrorAction SilentlyContinue
                         }
                         $resp.success = @($ovfResults | where Result -like 'Failed').Count -eq 0
                         $resp.testResults = $ovfResults | foreach {
