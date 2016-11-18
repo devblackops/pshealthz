@@ -74,7 +74,7 @@ function Start-HTTPListener {
                     [string]$Message
                 )
                 
-                $logFile = Join-Path -Path $LogDir -ChildPath (Get-Date).ToString('yyyyMMdd')
+                $logFile = Join-Path -Path $LogDir -ChildPath "$((Get-Date).ToString('yyyyMMdd')).log"
                 Write-Verbose -Message $Message
                 $Message | Out-File -FilePath $logFile -Encoding utf8 -Append -Force
 
@@ -247,6 +247,7 @@ function Start-HTTPListener {
                         return
                     }
 
+                    $test = $null
                     if ($request.QueryString.HasKeys()) {
 
                         # Set content type if requested
