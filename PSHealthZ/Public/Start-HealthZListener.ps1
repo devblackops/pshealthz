@@ -393,6 +393,8 @@ function Start-HealthZListener {
                     [string]$Module = '*'
                 )
 
+                $ovfModuleNames = @('OperationValidation', 'Microsoft.PowerShell.Operation.Validation')
+
                 # Track duration of testing
                 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 
@@ -410,8 +412,17 @@ function Start-HealthZListener {
 
                 try {
                     # Get OVF tests on the system
-                    $ovfTests = Microsoft.PowerShell.Operation.Validation\Get-OperationValidation -ModuleName $Module -Verbose:$false -ErrorAction SilentlyContinue |
-                        Where-Object {$_.ModuleName -notlike '*Microsoft.PowerShell.Operation.Validation*'} |
+                    $filter = {
+                        $leaf = Split-Path -Path $_.ModuleName -Leaf
+                        if ($leaf -as [Version]) {
+                            $moduleName = Split-Path -Path (Split-Path -Path $_.ModuleName -Parent) -Leaf
+                        } else {
+                            $moduleName = $leaf
+                        }
+                        $moduleName -notin $ovfModuleNames
+                    }
+                    $ovfTests = OperationValidation\Get-OperationValidation -ModuleName $Module -Verbose:$false -ErrorAction SilentlyContinue |
+                        Where-Object $filter |
                         Where-Object {$_.Name -like $Test}
                     $resp.availableTests = $ovfTests | ForEach-Object {
                         $r = [ordered]@{
@@ -431,7 +442,7 @@ function Start-HealthZListener {
                         # Execute the Pester/OVF tests
                         Import-Module -Name Pester -Verbose:$false -ErrorAction Stop
                         Write-Log -Message "Executing tests: `n$($ovfTests.Name)"
-                        $ovfResults = $ovfTests | Where-Object Name -like $Test | Microsoft.PowerShell.Operation.Validation\Invoke-OperationValidation -Verbose:$false -ErrorAction SilentlyContinue
+                        $ovfResults = $ovfTests | Where-Object Name -like $Test | OperationValidation\\Invoke-OperationValidation -Verbose:$false -ErrorAction SilentlyContinue
                         $resp.success = @($ovfResults | Where-Object Result -like 'Failed').Count -eq 0
 
                         # All test results
