@@ -18,16 +18,16 @@ function Resolve-Module {
         foreach ($ModuleName in $Name) {
             $Module = Get-Module -Name $ModuleName -ListAvailable -Verbose:$false | Sort-Object -Property Version -Descending | Select -First 1
             Write-Verbose -Message "Resolving Module [$($ModuleName)]"
-            
+
             if ($Module) {
                 $Version = $Module | Measure-Object -Property Version -Maximum | Select-Object -ExpandProperty Maximum
-                $GalleryVersion = Find-Module -Name $ModuleName -Repository PSGallery -Verbose:$false | 
-                    Measure-Object -Property Version -Maximum | 
+                $GalleryVersion = Find-Module -Name $ModuleName -Repository PSGallery -Verbose:$false |
+                    Measure-Object -Property Version -Maximum |
                     Select-Object -ExpandProperty Maximum
 
-                if ($Version -lt $GalleryVersion) {                                        
+                if ($Version -lt $GalleryVersion) {
                     Write-Verbose -Message "$($ModuleName) Installed Version [$($Version.tostring())] is outdated. Installing Gallery Version [$($GalleryVersion.tostring())]"
-                    
+
                     Install-Module -Name $ModuleName -Verbose:$false -Force
                     Import-Module -Name $ModuleName -Verbose:$false -Force -RequiredVersion $GalleryVersion
                 }
@@ -48,7 +48,7 @@ function Resolve-Module {
 Get-PackageProvider -Name Nuget -ForceBootstrap | Out-Null
 Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
 
-'BuildHelpers', 'psake' | Resolve-Module
+'BuildHelpers', 'psake', 'OperationValidation' | Resolve-Module
 
 $psakeScript = "$PSScriptRoot\psake.ps1"
 
