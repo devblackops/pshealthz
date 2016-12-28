@@ -1,0 +1,16 @@
+TOPIC
+    about_PSHealthZ
+
+SHORT DESCRIPTION
+    Basic HTTP listener written in PowerShell that executes Operation Validation Framework (OVF) tests and returns results using a simple REST API
+
+LONG DESCRIPTION
+    Basic HTTP(S) listener that executes [Operation Validation Framework](https://github.com/PowerShell/Operation-Validation-Framework) (OVF) tests that are present on the given system and returns results using a simple REST API.
+    This is an implementation of the [Health Endpoint Monitoring Pattern](https://msdn.microsoft.com/en-us/library/dn589789.aspx) using PowerShell.
+
+EXAMPLES
+
+KEYWORDS
+    'Operation, Validation, Pester, OVF, REST, Health
+
+SEE ALSO
