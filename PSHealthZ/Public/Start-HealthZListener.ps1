@@ -32,8 +32,9 @@ function Start-HealthZListener {
     .EXAMPLE
         $token = New-HealthZToken
         $listener = Start-HealthZListener -AuthToken $token -PassThru
+        $testResults = Invoke-RestMethod -Uri "http://localhost:1938/health?token=$token?module=*"
 
-        Start a new PSHealthZ listener secured with a authentication token
+        Setup the listener with token authentication and execute all available tests.
     .EXAMPLE
         $thumbprint = '7D85481FE7D35AC4306AF2C4281879B73701D001'
         $listener = Start-HealthZListener -Port 8443 -UseSSL -CertificateThumbprint $thumbprint -PassThru
@@ -164,7 +165,7 @@ function Start-HealthZListener {
                     Write-Log -Message 'Inspecting token...'
 
                     # Check for token in headers or query string
-                    if ($request.Headers['AuthToken'] -or ($request.QueryString.HasKeys() -and $request.QueryString.Item('token'))) {
+                    if ($request.Headers['token'] -or ($request.QueryString.HasKeys() -and $request.QueryString.Item('token'))) {
 
                         # Validate token
                         if (Validate-Token -Request $request -AuthToken $AuthToken) {
@@ -442,7 +443,7 @@ function Start-HealthZListener {
                         # Execute the Pester/OVF tests
                         Import-Module -Name Pester -Verbose:$false -ErrorAction Stop
                         Write-Log -Message "Executing tests: `n$($ovfTests.Name)"
-                        $ovfResults = $ovfTests | Where-Object Name -like $Test | OperationValidation\\Invoke-OperationValidation -Verbose:$false -ErrorAction SilentlyContinue
+                        $ovfResults = $ovfTests | Where-Object Name -like $Test | OperationValidation\Invoke-OperationValidation -Verbose:$false -ErrorAction SilentlyContinue
                         $resp.success = @($ovfResults | Where-Object Result -like 'Failed').Count -eq 0
 
                         # All test results
@@ -501,10 +502,10 @@ function Start-HealthZListener {
                 )
 
                 # Token could be in headers or query string
-                if ($request.Headers['AuthToken']) {
-                    $providedToken = $request.Headers['AuthToken']
+                if ($Request.Headers['token']) {
+                    $providedToken = $Request.Headers['token']
                 } else {
-                    $providedToken = $request.QueryString.Item('token')
+                    $providedToken = $Request.QueryString.Item('token')
                 }
 
                 return ($providedToken -ceq $AuthToken)
