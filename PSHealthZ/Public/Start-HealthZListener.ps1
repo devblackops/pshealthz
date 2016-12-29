@@ -8,9 +8,7 @@ function Start-HealthZListener {
         The port the listener will listen on.
     .PARAMETER Path
         The URl path to listen on (e.g., '/health').
-    .PARAMETER Auth
-        The authentication scheme to use. Defaults to anonymous.
-    .PARAMETER AuthToken
+    .PARAMETER Token
         The authentication token to secure the endpoint with.
         If specified, the authentication scheme will be set to anonymous.
     .PARAMETER LogDir
@@ -31,7 +29,7 @@ function Start-HealthZListener {
         Start a new PSHealthZ listener on a custom port and path.
     .EXAMPLE
         $token = New-HealthZToken
-        $listener = Start-HealthZListener -AuthToken $token -PassThru
+        $listener = Start-HealthZListener -Token $token -PassThru
         $testResults = Invoke-RestMethod -Uri "http://localhost:1938/health?token=$token?module=*"
 
         Setup the listener with token authentication and execute all available tests.
@@ -42,17 +40,13 @@ function Start-HealthZListener {
         Start a new PSHealthZ listener using SSL on port 8443.
     #>
     [OutputType([pscustomobject])]
-    [cmdletbinding(SupportsShouldProcess,DefaultParameterSetName = 'auth')]
+    [cmdletbinding(SupportsShouldProcess)]
     param(
         [int]$Port = 1938,
 
         [string]$Path = 'health/',
 
-        [parameter(ParameterSetName = 'auth')]
-        [System.Net.AuthenticationSchemes]$Auth = [System.Net.AuthenticationSchemes]::Anonymous,
-
-        [parameter(ParameterSetName = 'token')]
-        [string]$AuthToken,
+        [string]$Token,
 
         [string]$LogDir = (Join-Path -Path $env:temp -ChildPath 'PSHealthZ'),
 
@@ -70,14 +64,13 @@ function Start-HealthZListener {
             throw "Port $Port is already in use!"
             return
         }
+
+        # Always use anonymous authentication.
+        # If token provided, we'll validate at that level
+        $Auth = [System.Net.AuthenticationSchemes]::Anonymous
     }
 
     process {
-        # If using token-based authentication, set HTTP authentication to anonymous
-        if ($PSCmdlet.ParameterSetName -eq 'token') {
-            $Auth = [System.Net.AuthenticationSchemes]::Anonymous
-        }
-
         # Make sure path always ends with '/'
         if (($Path.Length -gt 0) -and (-not $Path.EndsWith('/'))) {
             $Path += '/'
@@ -121,7 +114,7 @@ function Start-HealthZListener {
 
                     [System.Net.AuthenticationSchemes]$Auth,
 
-                    [string]$AuthToken,
+                    [string]$Token,
 
                     [bool]$UseSSL,
 
@@ -170,14 +163,14 @@ function Start-HealthZListener {
                     $continue = $false
 
                     # Authorize request if using tokens
-                    if ($null -ne $AuthToken -and $AuthToken -ne [string]::Empty) {
+                    if ($null -ne $Token -and $Token -ne [string]::Empty) {
                         Write-Log -Message 'Inspecting token...'
 
                         # Check for token in headers or query string
                         if ($request.Headers['token'] -or ($request.QueryString.HasKeys() -and $request.QueryString.Item('token'))) {
 
                             # Validate token
-                            if (Validate-Token -Request $request -AuthToken $AuthToken) {
+                            if (Validate-Token -Request $request -Token $Token) {
                                 Write-Log -Message 'Token matches'
                                 $continue = $true
                             } else {
@@ -288,13 +281,11 @@ function Start-HealthZListener {
                     try {
                         Write-Log -Message "Prefix: $Endpoint"
                         $listener.Prefixes.Add($Endpoint)
-
-                        if ($null -ne $AuthToken) {
+                        $listener.AuthenticationSchemes = $Auth
+                        if ($null -ne $Token) {
                             Write-Log -Message "Starting HTTP(s) server listening at [$Endpoint] with [token-based] authentication..."
-                            $listener.AuthenticationSchemes = [System.Net.AuthenticationSchemes]::Anonymous
                         } else {
                             Write-Log -Message "Starting HTTP(s) server listening at ]$Endpoint] with [$Auth] authentication..."
-                            $listener.AuthenticationSchemes = $Auth
                         }
                         $listener.Start()
 
@@ -507,7 +498,7 @@ function Start-HealthZListener {
                 function Validate-Token {
                     param(
                         $Request,
-                        $AuthToken
+                        $Token
                     )
 
                     # Token could be in headers or query string
@@ -517,7 +508,7 @@ function Start-HealthZListener {
                         $providedToken = $Request.QueryString.Item('token')
                     }
 
-                    return ($providedToken -ceq $AuthToken)
+                    return ($providedToken -ceq $Token)
                 }
 
                 function Write-Log {
@@ -543,11 +534,15 @@ function Start-HealthZListener {
             $jobParams = @{
                 Name = "PSHealthZHTTPListerner_$InstanceId"
                 ScriptBlock = $listenerScript
-                ArgumentList = @($Port, $Path, $endpoint, $Auth, $AuthToken, $PSBoundParameters.ContainsKey('UseSSL'), $CertificateThumbprint, $LogDir, $instanceId)
+                ArgumentList = @($Port, $Path, $endpoint, $Auth, $Token, $PSBoundParameters.ContainsKey('UseSSL'), $CertificateThumbprint, $LogDir, $instanceId)
             }
             $job = Start-Job @jobParams
 
-            Write-Verbose -Message "PSHealthZ HTTP listener starting at [$endpoint] with [$Auth] authentication"
+            if ($null -ne $Token) {
+                Write-Verbose -Message "PSHealthZ HTTP listener starting at [$endpoint] with [token-based] authentication"
+            } else {
+                Write-Verbose -Message "PSHealthZ HTTP listener starting at [$endpoint] with [$Auth] authentication"
+            }
             Write-Verbose -Message "Job Id: $($job.Id)"
             Write-Verbose -Message "To stop the listener run: Stop-HealthZListener -Id $($job.Id)"
 
@@ -563,8 +558,8 @@ function Start-HealthZListener {
                 log = (Join-Path -Path $LogDir -ChildPath "$($instanceId).log")
                 instanceId = $instanceId
             }
-            if ($PSBoundParameters.ContainsKey('AuthToken')) {
-                $listenerTracker.token = $AuthToken
+            if ($PSBoundParameters.ContainsKey('Token')) {
+                $listenerTracker.token = $Token
             }
             $script:httpListeners.Add($job.Id, $listenerTracker)
 

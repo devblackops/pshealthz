@@ -11,7 +11,7 @@ function New-HealthzToken {
         Create a new token
     .EXAMPLE
         $token = New-HealthZToken
-        $listener = Start-HealthzListener -AuthToken $token -PassThru
+        $listener = Start-HealthzListener -Token $token -PassThru
 
         Start a listener using a token for authentication.
     #>
