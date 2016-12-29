@@ -412,7 +412,7 @@ function Start-HealthZListener {
 
                     $resp = [ordered]@{
                         success = $true
-                        time = (get-date).ToString('yyyy-MM-dd hh:mm:ss')
+                        time = (get-date).ToUniversalTime().ToString('u')
                         timeElapsedMS = $null
                         message = ''
                         availableTests = @()
@@ -485,7 +485,7 @@ function Start-HealthZListener {
                                 }
                             }
                         } else {
-                            $resp.message = "PSHealthZ responds. Add query parameter '?test=<testname>' and/or ?module=<modulename> to execute specific test(s). Use '?test=*' to execute all available tests."
+                            $resp.message = "PSHealthZ responds but does not execute tests without being told to. Add query parameter '?test=<testname>' and/or '?module=<modulename>' to execute a specific tests. Available tests are listed in the 'availableTests' property of this response. Use '?test=*' or '?module=*' to execute all available tests regardless of module. Specific tests can be executed by filtering with the 'test' and 'module' query parameters."
                             $resp.success = $true
                         }
                     } catch {
