@@ -339,12 +339,14 @@ function Start-HealthZListener {
                             $ipPort = "0.0.0.0:$Port"
 
                             # Remove Previous SSL Bindings
+                            Write-Log -Message "Removing any previous SSL bindings on [$ipPort]"
                             Invoke-ConsoleCommand -Target $ipPort -Action 'removing SSL certificate binding' -ScriptBlock {
                                 netsh http delete sslcert ipPort="$ipPort"
                             }
                             #netsh http delete sslcert ipport="$ipPort"
 
                             # Add SSL Certificate
+                            Write-Log -Message "Binding certificate [$CertificateThumbprint] to [$ipPort]"
                             Invoke-ConsoleCommand -Target $ipPort -Action 'creating SSL certificate binding' -ScriptBlock {
                                 netsh http add sslcert ipport="$ipPort" certhash="$CertificateThumbprint" appid="{$InstanceId}"
                             }
