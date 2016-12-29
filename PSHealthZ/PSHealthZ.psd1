@@ -101,13 +101,13 @@ PrivateData = @{
     PSData = @{
 
         # Tags applied to this module. These help with module discovery in online galleries.
-        # Tags = @()
+        Tags = @('Pester','OVF','Operation','Validation','Infrastructure','Testing', 'REST', 'HealthZ', 'Health', 'Endpoint')
 
         # A URL to the license for this module.
-        # LicenseUri = ''
+        LicenseUri = 'https://raw.githubusercontent.com/devblackops/pshealthz/master/LICENSE'
 
         # A URL to the main website for this project.
-        # ProjectUri = ''
+        ProjectUri = 'https://github.com/devblackops/pshealthz'
 
         # A URL to an icon representing this module.
         # IconUri = ''
