@@ -2,15 +2,75 @@ TOPIC
     about_PSHealthZ
 
 SHORT DESCRIPTION
-    Basic HTTP listener written in PowerShell that executes Operation Validation Framework (OVF) tests and returns results using a simple REST API
+    PSHealthZ is an HTTP listener written in PowerShell that executes Operation Validation Framework (OVF)
+    tests and returns results using a simple REST API
 
 LONG DESCRIPTION
-    Basic HTTP(S) listener that executes [Operation Validation Framework](https://github.com/PowerShell/Operation-Validation-Framework) (OVF) tests that are present on the given system and returns results using a simple REST API.
+    Basic HTTP(S) listener that executes Operation Validation Framework (https://github.com/PowerShell/Operation-Validation-Framework)
+    (OVF) tests that are present on the given system and returns results using a simple REST API.
     This is an implementation of the [Health Endpoint Monitoring Pattern](https://msdn.microsoft.com/en-us/library/dn589789.aspx) using PowerShell.
 
+    The Operation Validation Framework is a PowerShell module used to execute Pester tests that validate the operation
+    of a system rather than test the behavior of code. This could mean running tests that validate certain Windows services
+    are running and IIS is responding on port 443.
+
+    Normally, OVF/Pester are executed locally on the system. PSHealthZ provides a way to remotely execute these OVF/Pester tests
+    and return the test results via a REST API.
+
+    When monitoring an application from a central monitoring platform, this enables that platform to only be concerned with hitting
+    a known endpoint URL and interpreting the results. The monitoring platform no longer needs to know how to monitor every application
+    in the environment as all monitoring logic has moved onto the system. This greatly simplifies the architecture of a monitoring
+    platform and can help move the responsibility of monitoring to application teams who know their application best.
+
 EXAMPLES
+    Setup a basic listener using default values. This will create a new listener on port 1938 using the path /health.
+
+        $listener = Start-HealthZListener -PassThru
+
+    To validate that the listener responds, run the following:
+
+        Invoke-RestMethod -Uri 'http://localhost:1938/health'
+
+    To get all currently running listeners (you can run more than one at a time provided they listen on different ports) run:
+        $listeners | Get-HealthZListener
+
+    To stop a listener, run:
+        $listener | Stop-HealhZListener
+        or
+        Stop-HealhZListener -Id $listener.Id
+        or
+        Get-HealthZListener | Stop-HealthZListener
+
+AUTHENTICATION
+    It is best that the PSHealthZ endpoint be protected from unauthenticated requests. To accomplish that, you can setup a secure token that
+    must be provided either in the query string or as an HTTP header. This ensures that only authenticated REST calls will be accepted.
+
+    Example:
+    $token = New-HealthZToken
+    Start-HealthZListener -Token $token
+
+    Call REST API using token in header
+    $headers = @{
+        token = $token
+    }
+    Invoke-RestMethod -Uri "http://localhost:1938/health?module=*" -Headers $headers
+
+    Call REST API using token in query string
+    Invoke-RestMethod -Uri "http://localhost:1938/health?module=*&token=$token"
+
+SSL
+    It is recommended that the listener use SSL. To accomplish that, a certificate must already be installed in the LocalMachine certificate store
+    and you must have the thumbprint available.
+
+    Run the following to setup the listener to use a locally installed certificate:
+        $thumbprint = '<your certificate thumbprint>'
+        $listener = Start-HealthZListener -Port 8443 -UseSSL -CertificateThumbprint $thumbprint -PassThru
 
 KEYWORDS
-    'Operation, Validation, Pester, OVF, REST, Health
+    'Operation, Validation, Pester, OVF, REST, Health, Testing
 
 SEE ALSO
+
+GitHub Project: https://github.com/devblackops/pshealthz
+Health Endpoint Monitoring Pattern: https://msdn.microsoft.com/en-us/library/dn589789.aspx
+Operation Validation Framework: https://github.com/PowerShell/Operation-Validation-Framework
