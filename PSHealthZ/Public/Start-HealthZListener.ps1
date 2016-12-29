@@ -519,8 +519,29 @@ function Start-HealthZListener {
                         [object]$Message
                     )
 
+                    $logsToKeep = 5
+                    $maxLogSize = 1
+
                     $now = (Get-Date).ToString('yyyy-MM-dd hh:mm:ss')
                     $log = Join-Path -Path $LogDir -ChildPath "$($InstanceId).log"
+
+                    # Roll log if necessary
+                    if (Test-Path -Path $log) {
+                        if ((($file = Get-Item -Path $log) -and ($file.Length/1mb) -gt $maxLogSize)) {
+                            # Remove the last item if it would go over the limit
+                            if (Test-Path -Path "$log.$logsToKeep") {
+                                Remove-Item -Path "$log.$logsToKeep"
+                            }
+                            foreach ($i in $($logsToKeep)..1) {
+                                if (Test-path -Path "$log.$($i-1)") {
+                                    Move-Item -Path "$log.$($i-1)" -Destination "$log.$i"
+                                }
+                            }
+                            Move-Item -Path $log -Destination "$log.$i"
+                            New-Item -Path $log -Type File -Force | Out-Null
+                        }
+                    }
+
                     Write-Verbose -Message $Message
                     "[$now] $Message" | Out-File -FilePath $log -Encoding utf8 -Append -Force
                 }
