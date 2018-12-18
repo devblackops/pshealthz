@@ -48,7 +48,7 @@ function Start-HealthZListener {
 
         [string]$Token,
 
-        [string]$LogDir = (Join-Path -Path $env:temp -ChildPath 'PSHealthZ'),
+        [string]$LogDir = (Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath 'PSHealthZ'),
 
         [switch]$UseSSL,
 
@@ -59,10 +59,52 @@ function Start-HealthZListener {
     )
 
     begin {
-        # Validate that desired port is not already in use
-        if (Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue) {
-            throw "Port $Port is already in use!"
+
+        # Fail fast if on *nix and trying to use SSL
+        # This should be added to a later release
+        if ($UseSSL.IsPresent -and ($IsMacOS -or $IsLinux)) {
+            throw 'Setting up a HTTPS listener on macOS or Linux is currently not supported :('
             return
+        }
+
+        #*nix method to get open
+        function GetNixTcpPorts([string]$Port = '*') {
+            $connections = lsof -i -P -n | grep LISTEN
+            $ports = foreach ($conn in $connections) {
+                $data = $conn -Split '\s+', 9
+                $props = [ordered]@{
+                    Command    = $data[0]
+                    PID        = $data[1]
+                    User       = $data[2]
+                    FD         = $data[3]
+                    Type       = $data[4]
+                    Device     = $data[5]
+                    SizeOffset = $data[6]
+                    Node       = $data[7]
+                    Name       = $data[8]
+                    Port       = $null
+                }
+                if ($data[8] -like '*]:*') {
+                    $props.Port = $data[8].Split(']:')[1].Split(' ')[0]
+                } else {
+                    $props.Port = $data[8].Split(':')[1].Split(' ')[0]
+                }
+                [pscustomobject]$props
+            }
+            $ports | Where-Object {$_.Port -like $Port}
+        }
+
+        # Validate that desired port is not already in use
+        if ($IsMacOS -or $IsLinux) {
+            if (GetNixTcpPorts -Port $Port) {
+                throw "Port $Port is already in use!"
+                return
+            }
+        } else {
+            if (Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue) {
+                throw "Port $Port is already in use!"
+                return
+            }
         }
 
         # Always use anonymous authentication.
@@ -396,12 +438,12 @@ function Start-HealthZListener {
                         [string]$Module = '*'
                     )
 
-                    $ovfModuleNames = @('OperationValidation', 'Microsoft.PowerShell.Operation.Validation')
+                    $ovfModuleNames = @('OperationValidation')
 
                     # Track duration of testing
                     $sw = [System.Diagnostics.Stopwatch]::StartNew()
 
-                    Import-Module -Name Microsoft.PowerShell.Operation.Validation -Verbose:$false -ErrorAction Stop
+                    Import-Module -Name 'OperationValidation' -Verbose:$false -ErrorAction Stop
 
                     $resp = [ordered]@{
                         success = $true

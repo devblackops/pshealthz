@@ -18,6 +18,7 @@ function New-HealthzToken {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '')]
     param()
 
-    Add-Type -AssemblyName 'System.Web'
-    return [System.Web.HttpServerUtility]::UrlTokenEncode((New-guid).ToByteArray())
+    $bytes = (New-Guid).ToByteArray()
+    $base64 = [System.Convert]::ToBase64String($bytes).Replace('+', '-').Replace('/', '_').Replace('=', '')
+    [System.Net.WebUtility]::UrlEncode($base64)
 }

@@ -23,7 +23,7 @@ function Invoke-ConsoleCommand {
     $output = Invoke-Command -ScriptBlock $ScriptBlock
     if ($LASTEXITCODE) {
         $output = $output -join [Environment]::NewLine
-        Write-Error ('Failed action ''{0}'' on target ''{1}'' (exit code {2}): {3}' -f $Action,$Target,$LASTEXITCODE,$output)
+        Write-Error ('Failed action ''{0}'' on target ''{1}'' (exit code {2}): {3}' -f $Action, $Target, $LASTEXITCODE, $output)
     } else {
         $output | Where-Object { $_ -ne $null } | Write-Verbose
     }
